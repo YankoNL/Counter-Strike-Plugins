@@ -5,7 +5,7 @@
 
 enum _:Cvars
 {
-	MODE, PARACHUTE, MULTIJUMP,
+	MODE, PARACHUTE, MULTIJUMP, SHOW_DMG,
 	Float:VIP_HP, VIP_AP,
 	Float:KILL_HP, KILL_AP, KILL_MONEY,
 	Float:HEADSHOT_HP, HEADSHOT_AP, HEADSHOT_MONEY,
@@ -17,13 +17,15 @@ const FCVAR_TYPE = FCVAR_NONE	//FCVAR_SPONLY|FCVAR_PROTECTED
 
 public plugin_init()
 {
-	register_plugin("Universal V.I.P", "2.1", "YankoNL")
+	register_plugin("Universal V.I.P", "2.2", "YankoNL")
 
 	bind_pcvar_num(create_cvar("vip_classic_mode", "0", FCVAR_TYPE, "Enable or Disable classic mode^nOn spawn the V.I.P player gets:^n- HE Grenade x1^n- Flash Grenade x1^n- Deagle with 35 BP ammo^n- Defuse Kit if CT", true, 0.0, true, 1.0), g_eCvars[MODE])
 
 	bind_pcvar_num(create_cvar("vip_parachute", "1", FCVAR_TYPE, "Enable or Disable parachute for V.I.P players", true, 0.0, true, 1.0), g_eCvars[PARACHUTE])
 
 	bind_pcvar_num(create_cvar("vip_multijump", "1", FCVAR_TYPE, "Enable or Disable multi-jumping for V.I.P players", true, 0.0, true, 1.0), g_eCvars[MULTIJUMP])
+
+	bind_pcvar_num(create_cvar("vip_show_dmg", "1", FCVAR_TYPE, "Enable or Disable DMG display for V.I.P players", true, 0.0, true, 1.0), g_eCvars[SHOW_DMG])
 
 	bind_pcvar_float(create_cvar("vip_hp", "100", FCVAR_TYPE, "Spawn health Max Limit", true, 1.0), g_eCvars[VIP_HP])
 
@@ -86,11 +88,14 @@ public OnPlayerTakeDamagePost(const iVictim, iInflictor, iAttacker, Float:flDama
 	if (!is_user_connected(iAttacker) || !is_user_vip(iAttacker) || !rg_is_player_can_takedamage(iAttacker, iVictim) || flDamage < 1.0)
 		return HC_CONTINUE
 	
-	set_hudmessage(255, 0, 0, 0.45, 0.50, 2, 0.1, 4.0, 0.1, 0.1, -1)
-	ShowSyncHudMsg(iVictim, g_SyncHudObj, "%.f", flDamage)
+	if(g_eCvars[SHOW_DMG])
+	{
+		set_hudmessage(255, 0, 0, 0.45, 0.50, 2, 0.1, 4.0, 0.1, 0.1, -1)
+		ShowSyncHudMsg(iVictim, g_SyncHudObj, "%.f", flDamage)
 	
-	set_hudmessage(0, 100, 200, -1.0, 0.55, 2, 0.1, 4.0, 0.02, 0.02, -1)
-	ShowSyncHudMsg(iAttacker, g_SyncHudObj, "%.f", flDamage)
+		set_hudmessage(0, 100, 200, -1.0, 0.55, 2, 0.1, 4.0, 0.02, 0.02, -1)
+		ShowSyncHudMsg(iAttacker, g_SyncHudObj, "%.f", flDamage)
+	}
 
 	return HC_CONTINUE
 }
