@@ -1,6 +1,5 @@
 #include <amxmodx>
 #include <amxmisc>
-#include <fun>
 #include <nvault>
 #include <reapi>
 
@@ -9,52 +8,67 @@
 new const PREFIX[]= "^4[^1S ^3Point Shop^4]";
 
 const ITEMS_LEFT = 	2;
+const ITEMS_LEFT_VIP = 	3;
+
 new const PlayerModels[][] = 
 {
 	"arctic", "leet", "guerilla", "terror", "gign", "urban", "sas", "gsg9"
 };
 
-enum Shop_Info
+enum _:ItemNames
 {
-	Item_Name[33],
+        HEALTH_ARMOR,
+        SPEED_BOOST,
+        LOW_GRAVITY,
+        INVISIBLE,
+        CHAMELEON,
+        AWP
+}
+
+enum _:ShopInfo
+{
+	Item_Name[MAX_NAME_LENGTH],
 	Item_Cost
 };
 
-new bool:is_UsedItem[][33];
-new const iShop[][Shop_Info] =
+new bool:is_UsedItem[MAX_PLAYERS + 1][ItemNames];
+
+new const g_eItems[ItemNames][ShopInfo] =
 {
-	0,
 	{"200 HP + 200 AP", 20},
 	{"Speed Boost", 15},
-	{"Low Gravity", 10},
-	{"Invisible", 25},
-	{"Chameleon", 15}
+	{"Lower Gravity", 10},
+	{"Invisibility 80%", 25},
+	{"Chameleon", 15},
+	{"AWP", 100}
 };
 
-new g_szPoints[33], g_szVault, bool:g_szVIP[33], itemsleft[33];
-// new g_SyncHudObj, g_szMaxPlayers;
+new g_szPoints[MAX_PLAYERS + 1], g_szVault, bool:g_szVIP[MAX_PLAYERS + 1];
+new itemsleft[MAX_PLAYERS + 1], items_bought[MAX_PLAYERS +1] = 0;
+//new g_SyncHudObj, g_szMaxPlayers;
 
 public plugin_init()
 {
-	register_plugin("Simple Point Shop", "1.0", "YankoNL");
+	register_plugin("Simple Point Shop", "1.1", "YankoNL");
 	
 	register_concmd("shop_give_points", "GivePoints", ADMIN_RCON, "<name/@all> <points>");
 	register_concmd("shop_remove_points", "RemovePoints", ADMIN_RCON, "<name> <points>");
 	
-	register_event("DeathMsg", "EventDeath", "a");
-	register_event("CurWeapon", "eventCurWeapon", "be", "1=1");
-	
+	RegisterHookChain(RG_CBasePlayer_ResetMaxSpeed, "OnPlayerWeaponChange", true);
 	RegisterHookChain(RG_CBasePlayer_Spawn, "OnPlayerSpawn", true);
 	RegisterHookChain(RG_CBasePlayer_Killed, "OnPlayerKill", true);
 	
 	register_clcmd("say /shop", "open_shop");
 	register_clcmd("say_team /shop", "open_shop");
+
+	register_clcmd("say /points", "show_points");
+	register_clcmd("say_team /points", "show_points");
 	
 	g_szVault = nvault_open("SPointShop_Data");
 
-	/*g_szMaxPlayers = get_maxplayers();
-	g_SyncHudObj = CreateHudSyncObj();
-	set_task(1.0, "task_Hud", _, _, _, "b");*/
+	//g_szMaxPlayers = get_maxplayers();
+	//g_SyncHudObj = CreateHudSyncObj();
+	//set_task(1.0, "task_Hud", _, _, _, "b");
 }
 
 // 
@@ -96,7 +110,7 @@ public GivePoints(id, level, cid)
 			SavePoints(all_index);
 		}
 		
-		client_print_color(0, print_team_default, "%s ^1ADMIN:^3 %s^1 gave^4 %d^1 Point%s to^3 All Players", PREFIX, AdminName, points, points == 1 ? "" : "s");
+		client_print_color(0, print_team_default, "%s ^1Admin ^3%s ^1gave ^4%d ^1Point%s to ^3All Players", PREFIX, AdminName, points, points == 1 ? "" : "s");
 	}
 	else
 	{
@@ -109,7 +123,7 @@ public GivePoints(id, level, cid)
 		new TargetName[64];
 		get_user_name(target, TargetName, charsmax(TargetName));
 		
-		client_print_color(0, print_team_default, "%s ^1ADMIN:^3 %s^1 gave^4 %d^1 Point%s to^3 %s.", PREFIX, AdminName, points, points == 1 ? "" : "s", TargetName);
+		client_print_color(0, print_team_default, "%s ^1Admin ^3%s ^1gave ^4%d ^1Point%s to ^3%s.", PREFIX, AdminName, points, points == 1 ? "" : "s", TargetName);
 	}
 
 	return PLUGIN_HANDLED;
@@ -138,7 +152,7 @@ public RemovePoints(id, level, cid)
 	new TargetName[64];
 	get_user_name(target, TargetName, charsmax(TargetName));
 		
-	client_print_color(0, print_team_default, "%s ^1ADMIN:^3 %s^1 removed^4 %d^1 Point%s from^3 %s.", PREFIX, AdminName, points, points == 1 ? "" : "s", TargetName);
+	client_print_color(0, print_team_default, "%s ^1Admin ^3%s ^1removed ^4%d ^1Point%s from ^3%s.", PREFIX, AdminName, points, points == 1 ? "" : "s", TargetName);
 	
 	return PLUGIN_HANDLED;
 }
@@ -167,8 +181,8 @@ public OnPlayerKill(iVictim, iAttacker)
 		new lost_points = 20;
 			
 		g_szPoints[iAttacker] -= lost_points;
-		set_dhudmessage(255, 0, 0, -1.0, 0.85, 0, 0.0, 3.0, 0.1, 0.1);
-		show_dhudmessage(iAttacker, "-%d", lost_points);
+		set_dhudmessage(255, 0, 0, -1.0, 0.85, 0, 0.0, 2.0, 0.1, 0.1);
+		show_dhudmessage(iAttacker, "[-%d points]", lost_points);
 		SavePoints(iAttacker);
 			
 		client_print_color(iAttacker, print_team_default, "%s ^1You lost^3 %d^4 point%s^1 for killing^3 teammate^1.", PREFIX, lost_points, lost_points == 1 ? "" : "s");
@@ -185,14 +199,18 @@ public OnPlayerKill(iVictim, iAttacker)
 		if(win_points)
 		{
 			g_szPoints[iAttacker] += win_points;
-			set_dhudmessage(0, 255, 0, -1.0, 0.85, 0, 0.0, 3.0, 0.1, 0.1);
-			show_dhudmessage(iAttacker, "+%d", win_points);
+			set_dhudmessage(0, 255, 0, -1.0, 0.85, 0, 0.0, 2.0, 0.1, 0.1);
+			show_dhudmessage(iAttacker, "[+%d points]", win_points);
 			win_points = 0;
 			SavePoints(iAttacker);
 		}
 	}
 	return HC_CONTINUE;
 }
+
+public show_points(id)
+	client_print_color(id, print_team_default, "%s ^1You have ^4%d ^1point%s in your account", PREFIX, g_szPoints[id], g_szPoints[id] == 1 ? "" : "s");
+
 
 public open_shop(id)
 {
@@ -218,23 +236,19 @@ public open_shop(id)
 public ShowShop(id)
 {
 	new iTitle[256];
-	formatex(iTitle, charsmax(iTitle), "\rSimple Point Shop");
+	formatex(iTitle, charsmax(iTitle), "\rSimple Point Shop^n ^n\yYou have \r%i \ypoint%s^n\yItems Bought: %d", g_szPoints[id], g_szPoints[id] == 1 ? "" : "s", items_bought[id]);
 
 	new menu = menu_create(iTitle, "ShopHandler");
 	
-	for(new i = 1; i < sizeof(iShop); i++)
+	for(new i = 0; i < sizeof(g_eItems); i++)
 	{
 		new tempid[10], g_szItem[64];
 		num_to_str(i, tempid, charsmax(tempid));
-		
-		if(g_szPoints[id] < iShop[i][Item_Cost])
-			formatex(g_szItem, charsmax(g_szItem), "\d%s [%d point%s]", iShop[i][Item_Name], iShop[i][Item_Cost], iShop[i][Item_Cost] == 1 ? "" : "s");
 
-		else if(is_UsedItem[i][id])
-			formatex(g_szItem, charsmax(g_szItem), "\d%s \y[Owned]", iShop[i][Item_Name]);
-
+		if(is_UsedItem[id][i])
+			formatex(g_szItem, charsmax(g_szItem), "\d%s \y[Owned]", g_eItems[i][Item_Name]);
 		else
-			formatex(g_szItem, charsmax(g_szItem), "\y%s \w[\r%d \ypoint%s\w]", iShop[i][Item_Name], iShop[i][Item_Cost], iShop[i][Item_Cost] == 1 ? "" : "s");
+			formatex(g_szItem, charsmax(g_szItem), "%s%s \r[%i point%s]", g_szPoints[id] >= g_eItems[i][Item_Cost] ? "\w" : "\d", g_eItems[i][Item_Name], g_eItems[i][Item_Cost], g_eItems[i][Item_Cost] == 1 ? "" : "s");
 
 		menu_additem(menu, g_szItem, tempid, _, menu_makecallback("ShopCallback"));
 	}
@@ -244,10 +258,7 @@ public ShowShop(id)
 
 public ShopCallback(id, menu, item)
 {
-	new g_szAccess, g_szInfo[3], g_szCallback;
-	menu_item_getinfo(menu, item, g_szAccess, g_szInfo, charsmax(g_szInfo), _, _, g_szCallback);
-	
-	if(g_szPoints[id] < iShop[str_to_num(g_szInfo)][Item_Cost] || is_UsedItem[str_to_num(g_szInfo)][id])
+	if(g_szPoints[id] < g_eItems[item][Item_Cost] || is_UsedItem[id][item])
 		return ITEM_DISABLED;
 
 	return ITEM_ENABLED;
@@ -261,43 +272,39 @@ public ShopHandler(id, menu, item)
 		return PLUGIN_HANDLED;
 	}
 	
-	new iData[6], iName[63], iAccess, iCallback;
-	menu_item_getinfo(menu, item, iAccess, iData, charsmax(iData), iName, charsmax(iName), iCallback);
-	
 	if(!is_user_alive(id)) return PLUGIN_HANDLED;
-	new g_szData = str_to_num(iData);
 	
-	switch(g_szData)
+	switch(item)
 	{
-		case 1:
+		case HEALTH_ARMOR:
 		{
-			set_entvar(id, var_health, 200);
+			set_entvar(id, var_health, 200.0);
 			rg_set_user_armor(id, 200, ARMOR_VESTHELM);
-			
-			ShopData(id, g_szData);
 		}
-		case 2:
+		case SPEED_BOOST:
 		{
-			set_user_maxspeed(id, 700.0);
-			client_cmd(id, "cl_forwardspeed 700");
-			ShopData(id, g_szData);
+			set_entvar(id, var_maxspeed, 350.0);
 		}
-		case 3:
+		case LOW_GRAVITY:
 		{
-			set_user_gravity(id, 0.6);
-			ShopData(id, g_szData);
+			set_entvar(id, var_gravity, 0.6);
 		}
-		case 4:
+		case INVISIBLE:
 		{
-			set_user_rendering(id, kRenderFxGlowShell, 0, 0, 0, kRenderTransColor, 60);
-			ShopData(id, g_szData);
+			new iPercent = 20; 
+			new iAlphaAmount = iPercent * 255 / 100; 
+			rg_set_user_rendering(id, kRenderFxNone, {0.0, 0.0, 0.0}, kRenderTransAlpha, float(iAlphaAmount));
 		}
-		case 5:
+		case CHAMELEON:
 		{
-			rg_set_user_model(id, PlayerModels[get_member(id, m_iTeam) == TEAM_CT? random_num(0, 3) : random_num(4,7)]); 				
-			ShopData(id, g_szData);
+			rg_set_user_model(id, PlayerModels[get_member(id, m_iTeam) == TEAM_CT? random_num(0, 3) : random_num(4,7)]);
+		}
+		case AWP:
+		{
+			rg_give_item_ex(id, "weapon_awp", GT_REPLACE, 30);
 		}
 	}
+	ShopData(id, item);
 		
 	menu_destroy(menu);
 	return PLUGIN_HANDLED;
@@ -305,36 +312,59 @@ public ShopHandler(id, menu, item)
 
 stock ShopData(id, g_Item)
 {
-	itemsleft[id]--;
-	is_UsedItem[g_Item][id] = true;
+	if(g_szPoints[id] < g_eItems[g_Item][Item_Cost])
+		client_print_color(id, print_team_default, "%s ^1You don't have enough points for ^4%s^1.", PREFIX, g_eItems[g_Item][Item_Name]);
+	else
+	{
+		itemsleft[id]--;
+		items_bought[id]++;
+		is_UsedItem[id][g_Item] = true;
 	
-	g_szPoints[id] -= iShop[g_Item][Item_Cost];
-	client_print_color(id, print_team_default, "%s ^1You bought yourself ^4%s^1.", PREFIX, iShop[g_Item][Item_Name]);
+		g_szPoints[id] -= g_eItems[g_Item][Item_Cost];
+		client_print_color(id, print_team_default, "%s ^1You bought yourself ^4%s^1.", PREFIX, g_eItems[g_Item][Item_Name]);
+
+		set_dhudmessage(200, 200, 0, -1.0, 0.80, 0, 0.0, 3.0, 0.1, 0.1);
+		if(itemsleft[id] == 0)
+			show_dhudmessage(id, "[No Items Left]");
+		else
+			show_dhudmessage(id, "[Items left: %d]", itemsleft[id]);
+	}
 }
 
 public OnPlayerSpawn(id)
 	if(is_user_alive(id))
 		Reset(id);
 
-public eventCurWeapon(id)
-	if(is_UsedItem[2][id]) 
-		set_user_maxspeed(id, 700.0);
+public OnPlayerWeaponChange(id)
+{
+	if (!is_user_alive(id))
+		return HC_CONTINUE;
+
+	if (is_UsedItem[id][SPEED_BOOST])
+		set_entvar(id, var_maxspeed, 350.0);
+
+	if (is_UsedItem[id][LOW_GRAVITY])
+		set_entvar(id, var_gravity, 0.6);
+
+	return HC_CONTINUE;
+}
 
 stock Reset(id)
 {
-	for(new i = 1; i < sizeof(iShop); i++)
-		is_UsedItem[i][id] = false;
-	
-	itemsleft[id] = ITEMS_LEFT;
+	for(new i = 0; i < sizeof(g_eItems); i++)
+		is_UsedItem[id][i] = false;
+	if(is_user_vip(id))
+		itemsleft[id] = ITEMS_LEFT_VIP;
+	else
+		itemsleft[id] = ITEMS_LEFT;
+
+	items_bought[id] = 0;
 	
 	remove_task(id);
 	
-	set_user_maxspeed(id, 250.0);
-	client_cmd(id, "cl_forwardspeed 400");
-
-	set_user_gravity(id, 1.0);
-	
-	set_user_rendering(id, kRenderFxGlowShell, 0, 0, 0, kRenderTransAlpha, 255);
+	rg_reset_maxspeed(id);
+	set_entvar(id, var_gravity, 1.0);
+	rg_set_user_rendering(id);
 	rg_reset_user_model(id);
 }
 
@@ -365,6 +395,22 @@ public SavePoints(id)
 		format(vaultdata, charsmax(vaultdata), "%i#", g_szPoints[id]);
 		nvault_set(g_szVault, UserName, vaultdata);
 	}
+}
+
+stock rg_give_item_ex(id, weapon[], GiveType:type = GT_APPEND, amount = 0)
+{
+	rg_give_item(id, weapon, type);
+	if (amount)
+		rg_set_user_bpammo(id, rg_get_weapon_info(weapon, WI_ID), amount);
+}
+
+// example: rg_set_user_rendering(id, kRenderFxGlowShell, {255,0,0}, kRenderNormal, 20.0);
+stock rg_set_user_rendering(index, fx = kRenderFxNone, {Float,_}:color[3] = {0.0,0.0,0.0}, render = kRenderNormal, Float:amount = 0.0)
+{
+	set_entvar(index, var_renderfx, fx);
+	set_entvar(index, var_rendercolor, color);
+	set_entvar(index, var_rendermode, render);
+	set_entvar(index, var_renderamt, amount);
 }
 
 bool:is_user_vip(id)
