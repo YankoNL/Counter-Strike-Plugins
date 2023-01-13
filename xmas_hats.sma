@@ -8,9 +8,7 @@ enum { hat }
 new g_MdlIndex, g_Ent[MAX_CLIENTS + 1]
 
 public plugin_precache()
-{
 	g_MdlIndex = precache_model(MDL_FILE)
-}
 
 public plugin_init()
 {
@@ -20,9 +18,6 @@ public plugin_init()
 
 public client_putinserver(id)
 {
-	//if(is_user_bot(id) || is_user_hltv(id))
-	//	return
-
 	CheckEnt(id)
 	if((g_Ent[id] = rg_create_entity("info_target")))
 	{
@@ -38,10 +33,8 @@ public client_disconnected(id)
 	CheckEnt(id)
 
 public FwdSpawnPost(const id)
-{
 	if(is_entity(g_Ent[id]) && is_user_alive(id))
 		SetEntModel(id, hat, get_member(id, m_iTeam))
-}
 
 CheckEnt(const id)
 {
