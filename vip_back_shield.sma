@@ -1,3 +1,13 @@
+/*
+#	Version 1.0 - Release
+#	- Model location fix by itz_bader (「 T B 」BADER)
+#
+#	Version 1.1 - Fix
+#	- Non V.I.P's sometimes had stab protection
+#	- Shield no longer works for players in the same team (reduce lag)
+*/
+#define PLUGIN_VERSION "1.1"
+
 #include <amxmodx>
 #include <fakemeta>
 #include <hamsandwich>
@@ -27,7 +37,8 @@ new g_Ent[33];
 
 public plugin_init()
 {
-	register_plugin("Back Shield", "1.0", "YankoNL");
+	register_plugin("Back Shield", "1.1", "YankoNL");
+	register_cvar("BackShield", PLUGIN_VERSION, FCVAR_SERVER|FCVAR_SPONLY|FCVAR_UNLOGGED);
 
 	RegisterHam(Ham_TraceAttack, "player", "PreTraceAttack");
 	RegisterHam(Ham_Spawn, "player", "FwdHamPlayerSpawn", 1);
@@ -46,10 +57,10 @@ public plugin_precache()
 
 public PreTraceAttack(iVictim, iAttacker)
 {
-	if(!is_user_vip(iVictim) && !is_user_connected(iAttacker))
+	if(!is_user_connected(iAttacker) || !is_user_vip(iVictim) || get_user_weapon(iAttacker) != CSW_KNIFE)
 		return HAM_IGNORED;
-	
-	if(get_user_weapon(iAttacker) != CSW_KNIFE)
+
+	if(get_user_team(iAttacker) == get_user_team(iVictim))
 		return HAM_IGNORED;
 
 	static Float:vecSrc[3];
