@@ -3,10 +3,21 @@
 #	- Model location fix by itz_bader (「 T B 」BADER)
 #
 #	Version 1.1 - Fix
-#	- Non V.I.P's sometimes had stab protection
+#	- Non V.I.P players sometimes had stab protection
 #	- Shield no longer works for players in the same team (reduce lag)
+#	- Back Shield message no longer appears when randombly slashing with a knife behind a teammate with V.I.P status
+#
+#	Version 1.2 - New Feature (More Realisitc)
+#	- Added spark when hitting a shield
+#	- Added metal hit sound when hitting a shield
+#
+#	Version 1.2.1 - Sound Fix
+#	- Removed the slash/stab player sound when hitting a shield
+#
+#	Version 1.2.2 - Sound Fix 2
+#	- Fixed a bug where after hitting a shield and hitting a teammate would play the metal hit sound
 */
-#define PLUGIN_VERSION "1.1"
+#define PLUGIN_VERSION "1.2.2"
 
 #include <amxmodx>
 #include <fakemeta>
@@ -32,16 +43,32 @@ new const g_szModel[][] =
 	"snowflake_shield"
 };
 
+new const g_szMetalSound[][] =
+{
+	"weapons/ric_metal-1.wav",
+	"weapons/ric_metal-2.wav"
+};
+
+new g_szKnifeStabs[][] = 
+{
+	"weapons/knife_hit1.wav",
+	"weapons/knife_hit2.wav",
+	"weapons/knife_hit3.wav",
+	"weapons/knife_hit4.wav",
+	"weapons/knife_stab.wav"
+};
+
 #define REMOVE_ENTITY(%1) set_pev(%1, pev_flags, FL_KILLME)
-new g_Ent[33];
+new g_Ent[33], g_bHitShield[33];
 
 public plugin_init()
 {
-	register_plugin("Back Shield", "1.1", "YankoNL");
+	register_plugin("Back Shield", PLUGIN_VERSION, "YankoNL");
 	register_cvar("BackShield", PLUGIN_VERSION, FCVAR_SERVER|FCVAR_SPONLY|FCVAR_UNLOGGED);
 
-	RegisterHam(Ham_TraceAttack, "player", "PreTraceAttack");
-	RegisterHam(Ham_Spawn, "player", "FwdHamPlayerSpawn", 1);
+	RegisterHam(Ham_TraceAttack, "player", "PreTraceAttack", false);
+	RegisterHam(Ham_Spawn, "player", "OnPlayerSpawn", true);
+	register_forward(FM_EmitSound , "EmitSound");
 }
 
 public plugin_precache()
@@ -53,12 +80,17 @@ public plugin_precache()
 		formatex(model, charsmax(model), "%s/%s.mdl", g_szPath, g_szModel[i]);
 		precache_model(model);
 	}
+
+	for(new i = 0; i < sizeof g_szMetalSound; i++)
+		precache_sound(g_szMetalSound[i]);
 }
 
-public PreTraceAttack(iVictim, iAttacker)
+public PreTraceAttack(iVictim, iAttacker, Float:flDamage, Float:fDir[3], ptr, iDamageType)
 {
 	if(!is_user_connected(iAttacker) || !is_user_vip(iVictim) || get_user_weapon(iAttacker) != CSW_KNIFE)
 		return HAM_IGNORED;
+
+	g_bHitShield[iAttacker] = false;
 
 	if(get_user_team(iAttacker) == get_user_team(iVictim))
 		return HAM_IGNORED;
@@ -84,11 +116,43 @@ public PreTraceAttack(iVictim, iAttacker)
 	{
 		client_print(iVictim, print_center, "[%s]^nPlayer '%n' tried to backstab you!", PREFIX, iAttacker);
 		client_print(iAttacker, print_center, "[%s]^nStab blocked by V.I.P shield!", PREFIX);
+		
+		new Float:vecEnd[3];
+		get_tr2(ptr, TR_vecEndPos, vecEnd);
+	
+		message_begin(MSG_BROADCAST, SVC_TEMPENTITY);
+		write_byte(TE_SPARKS);
+		engfunc(EngFunc_WriteCoord, vecEnd[0]);
+		engfunc(EngFunc_WriteCoord, vecEnd[1]);
+		engfunc(EngFunc_WriteCoord, vecEnd[2]);
+		message_end();
+
+		g_bHitShield[iAttacker] = true;
 
 		return HAM_SUPERCEDE;
 	}
 
 	return HAM_IGNORED;
+}
+
+public EmitSound(entity, channel, const sound[]) 
+{
+	if(pev_valid(entity) && is_user_alive(entity)) 
+	{
+		if(g_bHitShield[entity])
+		{
+			for(new i = 0; i < sizeof g_szKnifeStabs; i++) 
+			{
+				if(equal(sound , g_szKnifeStabs[i]))
+				{
+					emit_sound(entity, channel, g_szMetalSound[random(sizeof g_szMetalSound)], 1.0, ATTN_NORM, 0, PITCH_NORM);
+					return FMRES_SUPERCEDE;
+				}
+			}
+		}
+	}
+
+	return FMRES_IGNORED;
 }
 
 #if defined ENGINE
@@ -107,7 +171,7 @@ public client_putinserver(id)
 	return PLUGIN_CONTINUE;
 }
 
-public FwdHamPlayerSpawn(id)
+public OnPlayerSpawn(id)
 {
 	if(!is_user_alive(id) && !is_valid_ent(g_Ent[id]))
 		return HAM_SUPERCEDE;
@@ -147,7 +211,7 @@ public client_putinserver(id)
 	return PLUGIN_CONTINUE;
 }
 
-public FwdHamPlayerSpawn(id)
+public OnPlayerSpawn(id)
 {
 	if(!is_user_alive(id))
 		return HAM_SUPERCEDE;
