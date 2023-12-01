@@ -1,65 +1,75 @@
 #include <amxmodx>
-#include <amxmisc>
-#include <zombieplague>
 
-#if AMXX_VERSION_NUM < 183
-    #include <dhudmessage>
-#endif
+#pragma semicolon 1
 
-new g_szCounter;
+new const g_szPrefix[] = "[ Countdown ]";
 
+new const g_szRoundStart[] = "downwego/fatall-start.wav";
+new const g_szZombieInfected[] = "downwego/fatall-come.wav";
 new g_szSounds[][] =
 {
-	"Fatall-Error/downwego/fatall-1.wav",
-	"Fatall-Error/downwego/fatall-2.wav",
-	"Fatall-Error/downwego/fatall-3.wav",
-	"Fatall-Error/downwego/fatall-4.wav",
-	"Fatall-Error/downwego/fatall-5.wav",
-	"Fatall-Error/downwego/fatall-6.wav",
-	"Fatall-Error/downwego/fatall-7.wav",
-	"Fatall-Error/downwego/fatall-8.wav",
-	"Fatall-Error/downwego/fatall-9.wav",
-	"Fatall-Error/downwego/fatall-10.wav"
+    "downwego/fatall-1.wav",
+	"downwego/fatall-2.wav",
+	"downwego/fatall-3.wav",
+	"downwego/fatall-4.wav",
+	"downwego/fatall-5.wav",
+	"downwego/fatall-6.wav",
+	"downwego/fatall-7.wav",
+	"downwego/fatall-8.wav",
+	"downwego/fatall-9.wav",
+	"downwego/fatall-10.wav"
 };
+
+new g_szCounter, g_msgSyncHUD;
 
 public plugin_init()
 {
-	register_plugin("[ZP] Countdown", "1.0", "YankoNL");
-	register_event("HLTV", "OnRoundStart", "a", "1=0", "2=0");
+	register_plugin("[ZP] Countdown", "1.1", "YankoNL");
+	register_event("HLTV", "Event_HLTV", "a", "1=0", "2=0");
+
+	g_msgSyncHUD = CreateHudSyncObj();
 }
 
 public plugin_precache()
 {
+	precache_sound(g_szRoundStart);
+	precache_sound(g_szZombieInfected);
+
 	for (new i = 0; i < sizeof g_szSounds; i++)
 		precache_sound(g_szSounds[i]);
-
-	precache_sound("Fatall-Error/downwego/fatall-come.wav")
 }
 
-public OnRoundStart()
+public Event_HLTV()
 {
+	emit_sound(0, CHAN_VOICE, g_szRoundStart, 1.0, ATTN_NORM, 0, PITCH_NORM);
+
 	g_szCounter = get_cvar_num("zp_delay");
-	zombie_countdown();
+	Toggle_CountDown();
 }
 
-public zombie_countdown()
-{	
+public Toggle_CountDown()
+{ 
+	if (11 < g_szCounter < 16)
+	{
+		set_hudmessage(0, 179, 0, -1.0, 0.28, 2, 0.02, 1.0, 0.01, 0.1, -1);
+		ShowSyncHudMsg(0, g_msgSyncHUD, "%s^nZombies are getting closer!", g_szPrefix); 
+	}
+
 	if (0 < g_szCounter < 11)
 	{
-		client_cmd(0, "spk %s", g_szSounds[g_szCounter - 1]);
-		set_dhudmessage(179, 0, 0, -1.0, 0.28, 1, 0.02, 0.02, 0.01, 0.1); 
-		show_dhudmessage(0, ".:Fatall-Error:.^nInfection after %i seconds", g_szCounter); 
+		emit_sound(0, CHAN_VOICE, g_szSounds[g_szCounter - 1], 1.0, ATTN_NORM, 0, PITCH_NORM);
+		set_hudmessage(random_num(100, 250), random_num(100, 250), random_num(100, 250), -1.0, 0.28, 1, 0.02, 0.95, 0.01, 0.1, 9, 0, {100, 0, 20, 250}); 
+		ShowSyncHudMsg(0, g_msgSyncHUD, "%s^nInfection in %i", g_szPrefix, g_szCounter); 
 	}
 
-	if(g_szCounter == 0)
+	if (g_szCounter == 0)
 	{
-		client_cmd(0, "spk Fatall-Error/downwego/fatall-come");
-		set_hudmessage(179, 0, 0, -1.0, 0.28, 1, 0.02, 0.02, 0.1, 1.1);
-		show_dhudmessage(0, ".:Fatall-Error:.^nCOME MY CHILDREN!!!");
+		emit_sound(0, CHAN_VOICE, g_szZombieInfected, 1.0, ATTN_NORM, 0, PITCH_NORM);
+		set_hudmessage(179, 0, 0, -1.0, 0.28, 2, 0.02, 1.0, 0.01, 0.1, 10);
+		ShowSyncHudMsg(0, g_msgSyncHUD, "COME MY CHILDREN"); 
 	}
-
 	g_szCounter--;
-		
+
 	if (g_szCounter >= 0)
-		set_task(1.0, "zombie_countdown");
+		set_task(1.0, "Toggle_CountDown");
 }
