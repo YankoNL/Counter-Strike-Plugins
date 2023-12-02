@@ -24,7 +24,7 @@ new g_szCounter, g_msgSyncHUD;
 
 public plugin_init()
 {
-	register_plugin("[ZP] Countdown", "1.1", "YankoNL");
+	register_plugin("[ZP] Countdown", "1.2", "YankoNL");
 	register_event("HLTV", "Event_HLTV", "a", "1=0", "2=0");
 
 	g_msgSyncHUD = CreateHudSyncObj();
@@ -41,7 +41,11 @@ public plugin_precache()
 
 public Event_HLTV()
 {
-	emit_sound(0, CHAN_VOICE, g_szRoundStart, 1.0, ATTN_NORM, 0, PITCH_NORM);
+	if(containi(g_szRoundStart,".mp3"))
+		client_cmd(0,"mp3 play ^"sound/%s^"",g_szRoundStart);
+
+	if(containi(g_szRoundStart,".wav"))
+		client_cmd(0,"spk ^"%s^"",g_szRoundStart);
 
 	g_szCounter = get_cvar_num("zp_delay");
 	Toggle_CountDown();
@@ -66,7 +70,7 @@ public Toggle_CountDown()
 	{
 		emit_sound(0, CHAN_VOICE, g_szZombieInfected, 1.0, ATTN_NORM, 0, PITCH_NORM);
 		set_hudmessage(179, 0, 0, -1.0, 0.28, 2, 0.02, 1.0, 0.01, 0.1, 10);
-		ShowSyncHudMsg(0, g_msgSyncHUD, "COME MY CHILDREN"); 
+		ShowSyncHudMsg(0, g_msgSyncHUD, "%s^nCOME MY CHILDREN", g_szPrefix); 
 	}
 	g_szCounter--;
 
