@@ -1,3 +1,44 @@
+/*	
+	[ZP] Countdown
+
+	* Description:
+		Announces when the round is starting with music and countdown.
+
+		Video: https://youtu.be/m_SFeLJYZHk
+
+	* Requeriments:
+		- AMXX 1.8.3 or higher.
+
+	* Change Log:
+		0.1 - First Release 13.07.2016
+
+		1.0 - Code optimization
+		
+		1.1 - More optimizations
+			- Replaced DHUD with HUD
+			- Added round start sound
+		
+		1.2 - Added MP3 support for round start
+
+		1.3 - Added cvar to select countdown message type (HUD or DHUD)
+			- Cvar setting 'zp_countdown_dhud' - 0 is HUD | 1 is DHUD
+
+		1.4 - Optimization
+			- Removed cvar zp_coutdown_dhud
+			- Added sound detection WAV and MP3 (Only for Round Start sound)
+			- Added cvar zp_countdown_display_type (0 - Center Chat, 1 - HUD, 2 - DHUD)
+			- Added cvar zp_countdown_custom_delay Set only if your mod isn't supported
+
+		1.4.1 - Added Stocks for optimization and easy future edits
+			- Added stock 'precache_sound_type()' that detects whether the file is WAV or MP3 and precaches it accordingly 
+			- Added stock 'play_sound_type()' that detects whether the file is WAV or MP3 and plays it accordingly 
+
+		* Current Mod Support:
+			- Biohazard (bh_starttime)
+			- Zombie Plague 4.3 or with the same cvar (zp_delay)
+			- ZP 5.0 (zp_gamemode_delay)
+			
+*/
 #include <amxmodx>
 
 #pragma semicolon 1
