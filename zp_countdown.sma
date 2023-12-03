@@ -39,7 +39,7 @@ new g_szCounter, g_msgSyncHUD, g_eCvarShowType, g_eCvarDelay;
 
 public plugin_init()
 {
-	register_plugin("[ZP] Countdown", "1.4", "YankoNL");
+	register_plugin("[ZP] Countdown", "1.4.1", "YankoNL");
 	register_event("HLTV", "Event_HLTV", "a", "1=0", "2=0");
 
 	g_eCvarShowType = register_cvar("zp_countdown_display_type", "2");	// 0 - Center Chat | 1 - HUD | 2 - DHUD
@@ -50,44 +50,16 @@ public plugin_init()
 
 public plugin_precache()
 {
-	new szData[128];
-	formatex(szData, charsmax(szData), g_szRoundStart);
-
-	switch(get_sound_type(szData))
-	{
-		case TYPE_WAV: precache_sound(szData);
-		case TYPE_MP3:
-		{
-			format(szData, charsmax(szData), "sound/%s", szData);
-			precache_generic(szData);
-		}
-		case TYPE_INVALID: return;
-	}
-
+	precache_sound_type(g_szRoundStart);
 	precache_sound(g_szZombieInfected);
 
-	for (new i = 0; i < sizeof g_szCountSound; i++)
+	for(new i = 0; i < sizeof g_szCountSound; i++)
 		precache_sound(g_szCountSound[i]);
 }
 
 public Event_HLTV()
 {
-	new szData[128];
-	formatex(szData, charsmax(szData), g_szRoundStart);
-
-	switch(get_sound_type(szData))
-	{
-		case TYPE_WAV:
-			client_cmd(0, "spk %s", szData);
-
-		case TYPE_MP3:
-		{
-			format(szData, charsmax(szData), "sound/%s", szData);
-			client_cmd(0, "mp3 play %s", szData);
-		}
-
-		case TYPE_INVALID: return;
-	}
+	play_sound_type(g_szRoundStart);
 
 	if(cvar_exists("bh_starttime"))
 		g_szCounter = get_cvar_num("bh_starttime");			// Biohazard Support
@@ -107,16 +79,16 @@ public Toggle_CountDown()
 	{
 		case TYPE_CHAT:
 		{
-			if (11 < g_szCounter < 16)
+			if(11 < g_szCounter < 16)
 				client_print(0, print_center, "%s^nZombies are getting closer!", g_szPrefix); 
 
-			if (0 < g_szCounter < 11)
+			if(0 < g_szCounter < 11)
 			{
 				emit_sound(0, CHAN_VOICE, g_szCountSound[g_szCounter - 1], 1.0, ATTN_NORM, 0, PITCH_NORM);
 				client_print(0, print_center, "%s^nInfection in %i", g_szPrefix, g_szCounter); 
 			}
 
-			if (g_szCounter == 0)
+			if(g_szCounter == 0)
 			{
 				emit_sound(0, CHAN_VOICE, g_szZombieInfected, 1.0, ATTN_NORM, 0, PITCH_NORM);
 				client_print(0, print_center, "COME MY CHILDREN"); 
@@ -125,20 +97,20 @@ public Toggle_CountDown()
 		
 		case TYPE_HUD:
 		{
-			if (11 < g_szCounter < 16)
+			if(11 < g_szCounter < 16)
 			{
 				set_hudmessage(0, 179, 0, -1.0, 0.28, 2, 0.02, 1.0, 0.01, 0.1, 10);
 				ShowSyncHudMsg(0, g_msgSyncHUD, "%s^nZombies are getting closer!", g_szPrefix); 
 			}
 
-			if (0 < g_szCounter < 11)
+			if(0 < g_szCounter < 11)
 			{
 				emit_sound(0, CHAN_VOICE, g_szCountSound[g_szCounter - 1], 1.0, ATTN_NORM, 0, PITCH_NORM);
 				set_hudmessage(random_num(100, 250), random_num(100, 250), random_num(100, 250), -1.0, 0.28, 1, 0.02, 0.95, 0.01, 0.1, 10); 
 				ShowSyncHudMsg(0, g_msgSyncHUD, "%s^nInfection in %i", g_szPrefix, g_szCounter); 
 			}
 
-			if (g_szCounter == 0)
+			if(g_szCounter == 0)
 			{
 				emit_sound(0, CHAN_VOICE, g_szZombieInfected, 1.0, ATTN_NORM, 0, PITCH_NORM);
 				set_hudmessage(179, 0, 0, -1.0, 0.28, 2, 0.02, 1.0, 0.01, 0.1, 10);
@@ -148,20 +120,20 @@ public Toggle_CountDown()
 
 		case TYPE_DHUD:
 		{
-			if (11 < g_szCounter < 16)
+			if(11 < g_szCounter < 16)
 			{
 				set_dhudmessage(0, 179, 0, -1.0, 0.28, 2, 0.02, 1.0, 0.01, 0.1);
 				show_dhudmessage(0, "%s^nZombies are getting closer!", g_szPrefix); 
 			}
 
-			if (0 < g_szCounter < 11)
+			if(0 < g_szCounter < 11)
 			{
 				emit_sound(0, CHAN_VOICE, g_szCountSound[g_szCounter - 1], 1.0, ATTN_NORM, 0, PITCH_NORM);
 				set_dhudmessage(random_num(100, 250), random_num(100, 250), random_num(100, 250), -1.0, 0.28, 1, 0.02, 0.95, 0.01, 0.1); 
 				show_dhudmessage(0, "%s^nInfection in %i", g_szPrefix, g_szCounter); 
 			}
 
-			if (g_szCounter == 0)
+			if(g_szCounter == 0)
 			{
 				emit_sound(0, CHAN_VOICE, g_szZombieInfected, 1.0, ATTN_NORM, 0, PITCH_NORM);
 				set_dhudmessage(179, 0, 0, -1.0, 0.28, 2, 0.02, 1.0, 0.01, 0.1);
@@ -174,6 +146,43 @@ public Toggle_CountDown()
 
 	if (g_szCounter >= 0)
 		set_task(1.0, "Toggle_CountDown");
+}
+
+stock precache_sound_type(const szName[])
+{
+	new szData[128];
+	formatex(szData, charsmax(szData), szName);
+
+	switch(get_sound_type(szData))
+	{
+		case TYPE_WAV: precache_sound(szData);
+		case TYPE_MP3:
+		{
+			format(szData, charsmax(szData), "sound/%s", szData);
+			precache_generic(szData);
+		}
+		case TYPE_INVALID: return;
+	}
+}
+
+stock play_sound_type(const szName[])
+{
+	new szData[128];
+	formatex(szData, charsmax(szData), szName);
+
+	switch(get_sound_type(szData))
+	{
+		case TYPE_WAV:
+			client_cmd(0, "spk %s", szData);
+
+		case TYPE_MP3:
+		{
+			format(szData, charsmax(szData), "sound/%s", szData);
+			client_cmd(0, "mp3 play %s", szData);
+		}
+
+		case TYPE_INVALID: return;
+	}
 }
 
 get_gvar_type(szCvar)
