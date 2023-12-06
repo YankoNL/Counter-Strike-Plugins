@@ -31,7 +31,11 @@
 
 		1.4.1 - Added Stocks for optimization and easy future edits
 			- Added stock 'precache_sound_type()' that detects whether the file is WAV or MP3 and precaches it accordingly 
-			- Added stock 'play_sound_type()' that detects whether the file is WAV or MP3 and plays it accordingly 
+			- Added stock 'play_sound_type()' that detects whether the file is WAV or MP3 and plays it accordingly
+
+		1.5 - Bugfix + Mod support define
+			- Little hardcoded, but no need to guess if the mod exists (User selects the mod before compilation)
+			- Fixed an Audio and Visual bug when round restars or a mode is chosen during the countdown
 
 		* Current Mod Support:
 			- Biohazard (bh_starttime)
@@ -57,6 +61,22 @@ enum
 	TYPE_MP3
 };
 
+// #define BIO 
+// #define ZP43
+// #define ZP50
+
+#if defined BIO
+#include <biohazard>
+#endif
+
+#if defined ZP43
+#include <zombieplague>
+#endif
+
+#if defined ZP50
+#include <zp50_gamemodes>
+#endif
+
 new const g_szPrefix[] = "[ Countdown ]";
 
 new const g_szRoundStart[] = "downwego/fatall-start.wav";
@@ -80,7 +100,7 @@ new g_szCounter, g_msgSyncHUD, g_eCvarShowType, g_eCvarDelay;
 
 public plugin_init()
 {
-	register_plugin("[ZP] Countdown", "1.4.1", "YankoNL");
+	register_plugin("[ZP] Countdown", "1.5", "YankoNL");
 	register_event("HLTV", "Event_HLTV", "a", "1=0", "2=0");
 
 	g_eCvarShowType = register_cvar("zp_countdown_display_type", "2");	// 0 - Center Chat | 1 - HUD | 2 - DHUD
@@ -102,14 +122,15 @@ public Event_HLTV()
 {
 	play_sound_type(g_szRoundStart);
 
-	if(cvar_exists("bh_starttime"))
-		g_szCounter = get_cvar_num("bh_starttime");			// Biohazard Support
-	else if(cvar_exists("zp_delay"))
-		g_szCounter = get_cvar_num("zp_delay");				// ZP 4.3 Support
-	else if(cvar_exists("zp_gamemode_delay"))
-		g_szCounter = get_cvar_num("zp_gamemode_delay");	// ZP 5.0 Support
-	else
-		g_szCounter = get_pcvar_num(g_eCvarDelay);			// Custom if no cvar is found
+#if defined BIO
+	g_szCounter = get_cvar_num("bh_starttime");			// Biohazard Support
+#elseif defined ZP43
+	g_szCounter = get_cvar_num("zp_delay");				// ZP 4.3 Support
+#elseif defined ZP50
+	g_szCounter = get_cvar_num("zp_gamemode_delay");	// ZP 5.0 Support
+#else
+	g_szCounter = get_pcvar_num(g_eCvarDelay);			// Custom if no cvar is found
+#endif
 
 	Toggle_CountDown();
 }
@@ -185,7 +206,7 @@ public Toggle_CountDown()
 
 	g_szCounter--;
 
-	if (g_szCounter >= 0)
+	if(g_szCounter >= 0 || !is_mode_started())
 		set_task(1.0, "Toggle_CountDown");
 }
 
@@ -246,4 +267,17 @@ get_sound_type(szSound[])
 	}
 	
 	return TYPE_INVALID;
+}
+
+stock is_mode_started()
+{
+#if defined BIO
+	return game_started();
+#elseif defined ZP43
+	return zp_has_round_started() == 1;
+#elseif defined ZP50
+	return zp_gamemodes_get_current() != ZP_NO_GAME_MODE;
+#else
+	return false;
+#endif
 }
