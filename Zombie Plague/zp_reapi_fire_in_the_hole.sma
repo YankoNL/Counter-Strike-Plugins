@@ -1,5 +1,5 @@
 /*	
-	[ZP] Countdown
+	[ZP] Fire In The Hole
 
 	* Description:
 		Shows to everyone in the server what grenade is thrown by who.
