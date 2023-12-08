@@ -10,7 +10,9 @@
 
 enum _:Cvars
 {
-	HP_MAX, HP_HEAL, SOUND
+	HP_MAX,
+	HP_HEAL,
+	SOUND
 }
 
 new g_eCvars[Cvars]
@@ -86,10 +88,10 @@ public set_fade(id, r, g, b, a)
 
 stock UTIL_PlayWeaponAnimation(const Player, const Sequence)
 {
-   set_pev(Player, pev_weaponanim, Sequence)
+	set_pev(Player, pev_weaponanim, Sequence)
    
-   message_begin(MSG_ONE_UNRELIABLE, SVC_WEAPONANIM, .player = Player)
-   write_byte(Sequence)
-   write_byte(pev(Player, pev_body))
-   message_end()
+	message_begin(MSG_ONE_UNRELIABLE, SVC_WEAPONANIM, .player = Player)
+	write_byte(Sequence)
+	write_byte(pev(Player, pev_body))
+	message_end()
 }
