@@ -4,12 +4,13 @@
 
 public plugin_init()
 {
-	register_plugin("[ZP] Addon: Damager", "1.0", "YankoNL");
+	register_plugin("[ZP] Addon: Damager", "1.0.1", "YankoNL");
+	register_cvar("yankonl", "1.0-zp-damager", FCVAR_SERVER|FCVAR_UNLOGGED|FCVAR_SPONLY);
 	
-	RegisterHam(Ham_TakeDamage, "player", "Player_TakeDamage", true);
+	RegisterHam(Ham_TakeDamage, "player", "OnPlayerTakeDamagePost", true);
 }
 
-public Player_TakeDamage(const iVictim, iInflictor, iAttacker, Float:flDamage, bitsDamageType)
+public OnPlayerTakeDamagePost(const iVictim, iInflictor, iAttacker, Float:flDamage, bitsDamageType)
 {
 	if(!is_user_alive(iAttacker))
 		return;
@@ -26,15 +27,15 @@ public Player_TakeDamage(const iVictim, iInflictor, iAttacker, Float:flDamage, b
 		}
 
 		if(iArmor > 0 && iHealth > 0)
-			client_print(iAttacker, print_center, "HP: %d | Armor: %d", iHealth, iArmor);
+			client_print(iAttacker, print_center, "HP: %d | Armor: %d | DMG: %.f", iHealth, iArmor, flDamage);
 		else if(iHealth > 0)
-			client_print(iAttacker, print_center, "HP: %d", iHealth, flDamage);
+			client_print(iAttacker, print_center, "HP: %d | DMG: %.f", iHealth, flDamage);
 		else
 			client_print(iAttacker, print_center, "KILLED!");
 	}
 	else
 	{
-		if(iHealth)
+		if(iHealth > 0)
 			client_print(iAttacker, print_center, "HP: %d | DMG: %.f", iHealth, flDamage);
 		else
 			client_print(iAttacker, print_center, "KILLED!");
