@@ -41,7 +41,10 @@
 		1.6 - Round Restart + Small bugfix
 			- Added first round restart to prevent slow loading players from waiting until next round
 			- Fixed countdown not stopping when a mod has been force started.
-			- Removed `#pragma semicolon 1` due to users reporting that they can't compile the code.
+			- Removed '#pragma semicolon 1' due to users reporting that they can't compile the code.
+
+		1.6.1 - Optimization
+			- Now 'zp_countdown_display_type' applies to the first round restar message
 
 		* Current Mod Support:
 			- Biohazard (bh_starttime)
@@ -109,9 +112,9 @@ new g_szCounter, g_msgSyncHUD, g_eCvarShowType, g_eCvarRestart, bool:g_iStarted 
 
 public plugin_init()
 {
-	register_plugin("[ZP] Countdown", "1.6", "YankoNL");
+	register_plugin("[ZP] Countdown", "1.6.1", "YankoNL");
 	register_event("HLTV", "Event_HLTV", "a", "1=0", "2=0");
-	register_cvar("yankonl", "1.6-countdown", FCVAR_SERVER|FCVAR_UNLOGGED|FCVAR_SPONLY);
+	register_cvar("yankonl", "1.6.1-countdown", FCVAR_SERVER|FCVAR_UNLOGGED|FCVAR_SPONLY);
 
 	g_eCvarRestart = register_cvar("zp_round_restart_seconds", "33");		// First round restart time. So you can wait for everyone to join.
 	g_eCvarShowType = register_cvar("zp_countdown_display_type", "2");		// 0 - Center Chat | 1 - HUD | 2 - DHUD
@@ -146,19 +149,33 @@ public plugin_cfg()
 	server_cmd("zp_gamemode_delay 999");
 #endif
 
-	set_task(1.0, "first_restart");
+	set_task(1.0, "first_round_restart");
 	g_szCounter = get_pcvar_num(g_eCvarRestart);
 }
 
-public first_restart()
+public first_round_restart()
 {
 	if(g_szCounter)
 	{
-		set_dhudmessage(0, 179, 179, -1.0, 0.28, 1, 0.0, 0.1, 0.1, 1.0);
-		show_dhudmessage(0, "Waiting for all players to join...^nGame Starting in %i", g_szCounter);
+		switch(get_gvar_type(get_pcvar_num(g_eCvarShowType)))
+		{
+			case TYPE_CHAT: client_print(0, print_center, "Waiting for all players to join...^nGame Starting in %i", g_szCounter); 
+		
+			case TYPE_HUD:
+			{
+				set_hudmessage(0, 179, 179, -1.0, 0.28, 1, 0.0, 0.1, 0.1, 1.0, -1);
+				ShowSyncHudMsg(0, g_msgSyncHUD, "Waiting for all players to join...^nGame Starting in %i", g_szCounter);
+			}
+
+			case TYPE_DHUD:
+			{
+				set_dhudmessage(0, 179, 179, -1.0, 0.28, 1, 0.0, 0.1, 0.1, 1.0);
+				show_dhudmessage(0, "Waiting for all players to join...^nGame Starting in %i", g_szCounter);
+			}
+		}
 
 		g_szCounter--;
-		set_task(1.0, "first_restart");
+		set_task(1.0, "first_round_restart");
 	}
 	else
 	{
