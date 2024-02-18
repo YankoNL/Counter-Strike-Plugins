@@ -44,7 +44,7 @@ new const BUTTON_PREFIX[] = "[Buttons]";
 public plugin_init()
 {
 	register_plugin("[ZE] Enviroment Informer", "1.2", "YankoNL");
-	register_cvar("yankonl", "ze-1.2-env-info", FCVAR_SERVER|FCVAR_UNLOGGED|FCVAR_SPONLY);
+	register_cvar("ynl_ZeInfo", "1.2", FCVAR_SERVER|FCVAR_UNLOGGED|FCVAR_SPONLY);
 
 	RegisterHam(Ham_TakeDamage, "func_breakable", "OnBreakableTakeDamage", true);
 	RegisterHam(Ham_Use, "func_button", "OnButtonPress", true);
