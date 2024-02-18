@@ -1,109 +1,97 @@
 #include <amxmodx>
 #include <csx>
+#include <fakemeta>
 #include <hamsandwich>
 
 #pragma semicolon 1
 
 const Linux_Diff = 4;
 const m_pPlayer = 41;
+const m_iWeap = 43;
 
-new he_used[33], flash_used[33], smoke_used[33];
-new bool:is_he_used[33], bool:is_flash_used[33], bool:is_smoke_used[33];
+enum (+=1)
+{
+	NADE_HE = 0,
+	NADE_FLASH,
+	NADE_SMOKE,
+	NADE_NONE
+};
+
+new const szGrenadeType[][] =
+{
+	"weapon_hegrenade",
+	"weapon_flashbang",
+	"weapon_smokegrenade"
+};
+
+new const szGrenadeName[][]=
+{
+	"HE Grenade",
+	"Flashbang",
+	"Smoke Grenade"
+};
+
+new g_pCvars[NADE_NONE];
+new g_iLimit[MAX_PLAYERS+1][NADE_NONE];
 
 public plugin_init()
 {
-	register_plugin("Grenade Throw Limiter", "1.0", "YankoNL");
+	register_plugin("Grenade Throw Limiter", "1.1", "YankoNL");
+	register_cvar("ynl_grenade_limiter", "1.1", FCVAR_SERVER|FCVAR_UNLOGGED|FCVAR_SPONLY);
 
-	RegisterHam(Ham_Weapon_PrimaryAttack, "weapon_hegrenade", "OnThrowHE", false);
-	RegisterHam(Ham_Weapon_PrimaryAttack, "weapon_flashbang", "OnThrowFlash", false);
-	RegisterHam(Ham_Weapon_PrimaryAttack, "weapon_smokegrenade", "OnThrowSmoke", false);
+	g_pCvars[NADE_HE] = register_cvar("ynl_hegrenade_limit", "1");
+	g_pCvars[NADE_FLASH] = register_cvar("ynl_flashbang_limit", "2");
+	g_pCvars[NADE_SMOKE] = register_cvar("ynl_smokegrenade_limit", "1");
+
+	for(new i; i < sizeof(szGrenadeType); i++)
+		RegisterHam(Ham_Weapon_PrimaryAttack, szGrenadeType[i], "TryThrow", false);
+
 	RegisterHam(Ham_Spawn, "player", "OnPlayerSpawn", true);
 }
 
 public client_putinserver(id)
-	grenade_reset(id);
+	arrayset(g_iLimit[id], 0, sizeof(g_iLimit[]));
 
 public OnPlayerSpawn(id)
-	grenade_reset(id);
-
-public OnThrowHE(pEntity)
-{
-	new id = get_pdata_cbase(pEntity , m_pPlayer , Linux_Diff);
-
-	if(is_he_used[id])
-	{
-		client_print(id, print_center, "[Grenade Limiter]^nHE grenade throw limit reached!");
-		return HAM_SUPERCEDE;
-	}
-	return HAM_IGNORED;
-}
-
-public OnThrowFlash(pEntity)
-{
-	new id = get_pdata_cbase(pEntity , m_pPlayer , Linux_Diff);
-
-	if(is_flash_used[id])
-	{
-		client_print(id, print_center, "[Grenade Limiter]^nFlash grenade throw limit reached!");
-		return HAM_SUPERCEDE;
-	}
-	return HAM_IGNORED;
-}
-
-public OnThrowSmoke(pEntity)
-{
-	new id = get_pdata_cbase(pEntity , m_pPlayer , Linux_Diff);
-
-	if(is_smoke_used[id])
-	{
-		client_print(id, print_center, "[Grenade Limiter]^nSmoke grenade throw limit reached!");
-		return HAM_SUPERCEDE;
-	}
-	return HAM_IGNORED;
-}
-
-public grenade_reset(id)
-{
-	is_he_used[id] = false;
-	is_flash_used[id] = false;
-	is_smoke_used[id] = false;
-
-	he_used[id] = 0;
-	flash_used[id] = 0;
-	smoke_used[id] = 0;
-
-}
+	arrayset(g_iLimit[id], 0, sizeof(g_iLimit[]));
 
 public grenade_throw(id, iGrenade, iWeapon)
 {
-	switch(iWeapon)
-	{
-		case CSW_HEGRENADE:
-		{
-			he_used[id]++;
-			grenade_counter(id, he_used[id], flash_used[id], smoke_used[id]);
-		}
-		case CSW_FLASHBANG:
-		{
-			flash_used[id]++;
-			grenade_counter(id, he_used[id], flash_used[id], smoke_used[id]);
-		}
-		case CSW_SMOKEGRENADE:
-		{
-			smoke_used[id]++;
-			grenade_counter(id, he_used[id], flash_used[id], smoke_used[id]);
-		}
-	}
+	new iKey = get_grenade_type(iWeapon);
+
+	if(iKey == NADE_NONE) return;
+
+	++g_iLimit[id][iKey];
 }
 
-stock grenade_counter(id, iHE, iFlash, iSmoke)
+public TryThrow(pEntity)
 {
-	if(iHE == 2)
-		is_he_used[id] = true;
+	static iWeapon, id;
 
-	if(iFlash == 2)
-		is_flash_used[id] = true;
+	iWeapon = get_pdata_int(pEntity, m_iWeap, Linux_Diff);
+	id = get_pdata_cbase(pEntity, m_pPlayer, Linux_Diff);
 
-	if(iSmoke == 2)
-		is_smoke_used[id] = true;
+	new iType = get_grenade_type(iWeapon);
+
+	new iLimit = get_pcvar_num(g_pCvars[iType]);
+
+	if(g_iLimit[id][iType] >= iLimit)
+	{
+		client_print(id, print_center, "[Grenade Limiter]^n%s throw limit reached!", szGrenadeName[iType]);
+		return HAM_SUPERCEDE;
+	}
+
+	return HAM_IGNORED;
+}
+
+get_grenade_type(item)
+{
+	switch(item)
+	{
+		case CSW_HEGRENADE: return NADE_HE;
+		case CSW_FLASHBANG: return NADE_FLASH;
+		case CSW_SMOKEGRENADE: return NADE_SMOKE;
+	}
+	
+	return NADE_NONE;
 }
