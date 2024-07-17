@@ -10,6 +10,7 @@ new g_iOldTimelimit = 0;
 public plugin_init()
 {
 	register_plugin("Last Round", "1.1" ,"YankoNL");
+	register_cvar("yankonl", "1.1-last-round", FCVAR_SERVER|FCVAR_UNLOGGED|FCVAR_SPONLY);
 	
 	register_event("SendAudio", "Event_EndRound","a", "2=%!MRAD_terwin", "2=%!MRAD_ctwin", "2=%!MRAD_rounddraw");
 	set_task(15.0, "Task_MapEnd", CHECK_FOR_MAPEND, _, _, "d", 1);
