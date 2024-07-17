@@ -18,9 +18,6 @@
 		1.2 - Map support
 			- Added map support for escape maps. (Starting with "ze_")
 			- Added map support for custom maps that don't start with "ze_", but are considered as escape maps. (You can add more maps in "ze_maps")
-
-		1.3 - Anti-Spam v2
-			- Now a Player can press multiple different buttons and show only these that weren't pressed in the last 5 seconds
 */
 
 #include <amxmodx>
@@ -30,7 +27,7 @@
 
 #pragma semicolon 1
 
-new bool:bPressed[33][512];
+new bool:bPressed[33];
 
 new ze_maps[] = 
 {
@@ -46,8 +43,8 @@ new const BUTTON_PREFIX[] = "[Buttons]";
 
 public plugin_init()
 {
-	register_plugin("[ZE] Enviroment Informer", "1.3", "YankoNL");
-	register_cvar("ynl_ZeInfo", "1.3", FCVAR_SERVER|FCVAR_UNLOGGED|FCVAR_SPONLY);
+	register_plugin("[ZE] Enviroment Informer", "1.2", "YankoNL");
+	register_cvar("ynl_ZeInfo", "1.2", FCVAR_SERVER|FCVAR_UNLOGGED|FCVAR_SPONLY);
 
 	RegisterHam(Ham_TakeDamage, "func_breakable", "OnBreakableTakeDamage", true);
 	RegisterHam(Ham_Use, "func_button", "OnButtonPress", true);
@@ -55,20 +52,18 @@ public plugin_init()
 
 public OnButtonPress(iButton, iActivator, iCaller, iUseType, Float:fValue)
 {
-	if(!zp_is_escape_map() || bPressed[iActivator][iButton]) return;
+	if(!zp_is_escape_map() || bPressed[iActivator]) return;
 
 	new iMapButtonName[32];
 	pev(iButton, pev_target, iMapButtonName, charsmax(iMapButtonName));
 
 	client_print_color(0, print_team_default, "^4%s ^1Player ^3%n ^1pressed ^4%s ", BUTTON_PREFIX, iActivator, iMapButtonName);
 
-	bPressed[iActivator][iButton] = true;
-
-	new iParam[2]; iParam[0] = iActivator; iParam[1] = iButton;
-	set_task(60.0, "anti_spam", iActivator+iButton, iParam, sizeof(iParam));
+	bPressed[iActivator] = true;
+	set_task(5.0, "anti_spam", iActivator);
 }
 
-public anti_spam(iParam[]) bPressed[iParam[0]][iParam[1]] = false;
+public anti_spam(iActivator) bPressed[iActivator] = false;
 
 public OnBreakableTakeDamage(const iEnt, iInflictor, iAttacker, Float:flDamage, bitsDamageType)
 {

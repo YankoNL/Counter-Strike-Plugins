@@ -30,9 +30,8 @@ new g_Cvar_TraceMode, bool:g_bSemiclipFound
 public plugin_init()
 {
 	register_plugin("[ZE] Anti-Block Map Entities", "1.0", "YankoNL")
-	register_cvar("ynl_ZeAntiBlockEntity", "1.0", FCVAR_SERVER|FCVAR_UNLOGGED|FCVAR_SPONLY);
 
-	for(new i = 0; i <= charsmax(szEntities); i++)
+	for (new i = 0; i <= charsmax(szEntities); i++)
 		RegisterHam(Ham_Blocked, szEntities[i], "OnBlocked_Pre")
 
 	bind_pcvar_num(create_cvar("amx_unstuck_trace_mode", "-1"), g_Cvar_TraceMode)
@@ -73,7 +72,7 @@ public func_Unstuck(pBlocker)
 	}
 
 	user_kill(pBlocker)
-	client_print_color(0, print_team_red, "^3[Anti-Block Escape] ^1Player ^4%n ^1has been killed for ^3blocking ^1the Escape.", pBlocker)
+	client_print(0, print_team_red, "^3[Anti-Block Escape] ^1Player ^4%n ^1has been killed for ^3blocking ^1the Escape.", pBlocker)
 }
 
 stock bool:is_hull_vacant(const Float:fOrigin[XYZ], iHull, pPlayer)
@@ -81,7 +80,7 @@ stock bool:is_hull_vacant(const Float:fOrigin[XYZ], iHull, pPlayer)
 	new iTraceResult
 	engfunc(EngFunc_TraceHull, fOrigin, fOrigin, func_GetTraceMode(), iHull, pPlayer, iTraceResult)
 
-	return(!get_tr2(iTraceResult, TR_StartSolid) || !get_tr2(iTraceResult, TR_AllSolid))
+	return (!get_tr2(iTraceResult, TR_StartSolid) || !get_tr2(iTraceResult, TR_AllSolid))
 }
 
 func_GetTraceMode()
