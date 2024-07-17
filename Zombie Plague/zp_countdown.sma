@@ -1,5 +1,9 @@
-/*	
-	[ZP] Countdown
+/* _____                      _       _                          __    ______ 
+  / ____|                    | |     | |                        /_ |  |____  |
+ | |      ___   _   _  _ __  | |_  __| |  ___ __      __ _ __    | |      / / 
+ | |     / _ \ | | | || '_ \ | __|/ _` | / _ \\ \ /\ / /| '_ \   | |     / /  
+ | |____| (_) || |_| || | | || |_| (_| || (_) |\ V  V / | | | |  | | _  / /   
+  \_____|\___/  \__,_||_| |_| \__|\__,_| \___/  \_/\_/  |_| |_|  |_|(_)/_/ 
 
 	* Description:
 		Announces when the round is starting with music and countdown.
@@ -46,44 +50,31 @@
 		1.6.1 - Optimization
 			- Now 'zp_countdown_display_type' applies to the first round restar message
 
+		1.7 - Bugfix
+			- Fixed a bug where the countdown and the warmup aren't executed correctly
+			- Fixed a bug where the sound overlaps, stops and sometimes heard multipe times
+			- Added full support + detection for .wav or .mp3 sounds in all categories
+
 		* Current Mod Support:
 			- Biohazard (bh_starttime)
 			- Zombie Plague 4.3 or with the same cvar (zp_delay)
 			- ZP 5.0 (zp_gamemode_delay)
 			
 */
+#define PLUGIN_VERSION "1.7"
+
 #include <amxmodx>
 
-enum
-{
-	TYPE_CHAT = 0,
-	TYPE_HUD,
-	TYPE_DHUD
-};
-
-enum
-{
-	TYPE_INVALID = 0,
-	TYPE_WAV,
-	TYPE_MP3
-};
+/* ======================= Edit below this line =======================*/
 
 // Uncomment the mod you are using or contact me to set it up your mod
 // if it's different than the supported ones. Discord: yankonl
 //
-// #define BIO 
-// #define ZP43
-// #define ZP50
+// Do not uncomment if you want to use custom countdown from the cvars
 
-#if defined BIO
-	#include <biohazard>
-#elseif defined ZP43
-	#include <zombie_plague_special>
-#elseif defined ZP50
-	#include <zp50_gamemodes>
-#else
-	new g_eCvarCustomDelay;
-#endif
+// #define BIO 		// Biohazard Support
+// #define ZP43		// ZP 4.3 Support
+// #define ZP50		// ZP 5.0 Support
 
 new const g_szPrefix[] = "[ Countdown ]";
 
@@ -104,22 +95,52 @@ new g_szCountSound[][] =
 	"downwego/fatall-10.wav"
 };
 
-new g_szCounter, g_msgSyncHUD, g_eCvarShowType, g_eCvarRestart, bool:g_iStarted = false;
+/* ============= DON'T EDIT BELOW (Edit at your own risk) ============= */
+
+enum
+{
+	TYPE_CHAT = 0,
+	TYPE_HUD,
+	TYPE_DHUD
+};
+
+enum
+{
+	TYPE_INVALID = 0,
+	TYPE_WAV,
+	TYPE_MP3
+};
+
+#if defined BIO
+	#include <biohazard>
+	#define PLUGIN_NAME "[Bio] Countdown"
+#elseif defined ZP43
+	#include <zombieplague>
+	#define PLUGIN_NAME "[ZP] Countdown"
+#elseif defined ZP50
+	#include <zp50_gamemodes>
+	#define PLUGIN_NAME "[ZP50] Countdown"
+#else
+	new g_eCvarCustomDelay;
+	#define PLUGIN_NAME "Countdown"
+#endif
 
 #if !defined g_eCvarCustomDelay
 	new g_iOldDelay;
 #endif
 
+new g_szCounter, g_msgSyncHUD, g_eCvarShowType, g_eCvarRestart, bool:g_iStarted = false;
+
 public plugin_init()
 {
-	register_plugin("[ZP] Countdown", "1.6.1", "YankoNL");
+	register_plugin(PLUGIN_NAME, PLUGIN_VERSION, "YankoNL");
 	register_event("HLTV", "Event_HLTV", "a", "1=0", "2=0");
-	register_cvar("yankonl", "1.6.1-countdown", FCVAR_SERVER|FCVAR_UNLOGGED|FCVAR_SPONLY);
+	register_cvar("ynl_countdown", PLUGIN_VERSION, FCVAR_SERVER|FCVAR_UNLOGGED|FCVAR_SPONLY);
 
-	g_eCvarRestart = register_cvar("zp_round_restart_seconds", "33");		// First round restart time. So you can wait for everyone to join.
-	g_eCvarShowType = register_cvar("zp_countdown_display_type", "2");		// 0 - Center Chat | 1 - HUD | 2 - DHUD
+	g_eCvarRestart = register_cvar("countdown_warmup_seconds", "60");	// First round restart time. So you can wait for everyone to join.
+	g_eCvarShowType = register_cvar("countdown_display_type", "2");		// 0 - Center Chat | 1 - HUD | 2 - DHUD
 #if defined g_eCvarCustomDelay
-	g_eCvarCustomDelay = register_cvar("zp_countdown_custom_delay", "15");	// Set only if no mod cvar is detected
+	g_eCvarCustomDelay = register_cvar("countdown_custom_delay", "22");	// Set only if no mod cvar is detected
 #endif
 
 	g_msgSyncHUD = CreateHudSyncObj();
@@ -128,15 +149,17 @@ public plugin_init()
 public plugin_precache()
 {
 	precache_sound_type(g_szRoundStart);
-	precache_sound(g_szZombieInfected);
+	precache_sound_type(g_szZombieInfected);
 
 	for(new i = 0; i < sizeof g_szCountSound; i++)
-		precache_sound(g_szCountSound[i]);
+		precache_sound_type(g_szCountSound[i]);
 }
 
-public plugin_cfg()
+public plugin_cfg() set_task(1.0, "warmup");
+
+public warmup()
 {
-	if(g_iStarted) return;
+	g_szCounter = get_pcvar_num(g_eCvarRestart);
 
 #if defined BIO
 	g_iOldDelay = get_cvar_num("bh_starttime");			// Biohazard Support
@@ -150,7 +173,6 @@ public plugin_cfg()
 #endif
 
 	set_task(1.0, "first_round_restart");
-	g_szCounter = get_pcvar_num(g_eCvarRestart);
 }
 
 public first_round_restart()
@@ -195,7 +217,7 @@ public Event_HLTV()
 {
 	if(!g_iStarted) return;
 
-	play_sound_type(g_szRoundStart);
+	play_sound_type(0, g_szRoundStart);
 
 #if defined BIO
 	g_szCounter = get_cvar_num("bh_starttime");			// Biohazard Support
@@ -223,13 +245,13 @@ public Toggle_CountDown()
 
 			if(0 < g_szCounter < 11)
 			{
-				emit_sound(0, CHAN_VOICE, g_szCountSound[g_szCounter - 1], 1.0, ATTN_NORM, 0, PITCH_NORM);
+				play_sound_type(0, g_szCountSound[g_szCounter - 1]);
 				client_print(0, print_center, "%s^nInfection in %i", g_szPrefix, g_szCounter); 
 			}
 
 			if(g_szCounter == 0)
 			{
-				emit_sound(0, CHAN_VOICE, g_szZombieInfected, 1.0, ATTN_NORM, 0, PITCH_NORM);
+				play_sound_type(0, g_szZombieInfected);
 				client_print(0, print_center, "COME MY CHILDREN"); 
 			}
 		}
@@ -244,14 +266,14 @@ public Toggle_CountDown()
 
 			if(0 < g_szCounter < 11)
 			{
-				emit_sound(0, CHAN_VOICE, g_szCountSound[g_szCounter - 1], 1.0, ATTN_NORM, 0, PITCH_NORM);
+				play_sound_type(0, g_szCountSound[g_szCounter - 1]);
 				set_hudmessage(g_szCounter > 7 ? 0 : 200, g_szCounter < 4 ? 0 : 200, 0, -1.0, 0.28, 1, 0.02, 0.95, 0.01, 0.1, 10); 
 				ShowSyncHudMsg(0, g_msgSyncHUD, "%s^nInfection in %i", g_szPrefix, g_szCounter); 
 			}
 
 			if(g_szCounter == 0)
 			{
-				emit_sound(0, CHAN_VOICE, g_szZombieInfected, 1.0, ATTN_NORM, 0, PITCH_NORM);
+				play_sound_type(0, g_szZombieInfected);
 				set_hudmessage(179, 0, 0, -1.0, 0.28, 2, 0.02, 1.0, 0.01, 0.1, 10);
 				ShowSyncHudMsg(0, g_msgSyncHUD, "COME MY CHILDREN"); 
 			}
@@ -267,14 +289,14 @@ public Toggle_CountDown()
 
 			if(0 < g_szCounter < 11)
 			{
-				emit_sound(0, CHAN_VOICE, g_szCountSound[g_szCounter - 1], 1.0, ATTN_NORM, 0, PITCH_NORM);
+				play_sound_type(0, g_szCountSound[g_szCounter - 1]);
 				set_dhudmessage(g_szCounter > 7 ? 0 : 200, g_szCounter < 4 ? 0 : 200, 0, -1.0, 0.28, 1, 0.02, 0.95, 0.01, 0.1); 
 				show_dhudmessage(0, "%s^nInfection in %i", g_szPrefix, g_szCounter); 
 			}
 
 			if(g_szCounter == 0)
 			{
-				emit_sound(0, CHAN_VOICE, g_szZombieInfected, 1.0, ATTN_NORM, 0, PITCH_NORM);
+				play_sound_type(0, g_szZombieInfected);
 				set_dhudmessage(179, 0, 0, -1.0, 0.28, 2, 0.02, 1.0, 0.01, 0.1);
 				show_dhudmessage(0, "COME MY CHILDREN"); 
 			}
@@ -304,7 +326,7 @@ stock precache_sound_type(const szName[])
 	}
 }
 
-stock play_sound_type(const szName[])
+stock play_sound_type(iPlayer, const szName[])
 {
 	new szData[128];
 	formatex(szData, charsmax(szData), szName);
@@ -312,12 +334,12 @@ stock play_sound_type(const szName[])
 	switch(get_sound_type(szData))
 	{
 		case TYPE_WAV:
-			client_cmd(0, "spk %s", szData);
+			client_cmd(iPlayer, "spk %s", szData);
 
 		case TYPE_MP3:
 		{
 			format(szData, charsmax(szData), "sound/%s", szData);
-			client_cmd(0, "mp3 play %s", szData);
+			client_cmd(iPlayer, "mp3 play %s", szData);
 		}
 
 		case TYPE_INVALID: return;
