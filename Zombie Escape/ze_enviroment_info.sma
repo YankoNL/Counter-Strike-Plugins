@@ -46,13 +46,8 @@ new const BUTTON_PREFIX[] = "[Buttons]";
 
 public plugin_init()
 {
-<<<<<<< Updated upstream
-	register_plugin("[ZE] Enviroment Informer", "1.2", "YankoNL");
-	register_cvar("ynl_ZeInfo", "1.2", FCVAR_SERVER|FCVAR_UNLOGGED|FCVAR_SPONLY);
-=======
 	register_plugin("[ZE] Enviroment Informer", "1.3", "YankoNL");
 	register_cvar("ynl_ZeInfo", "1.3", FCVAR_SERVER|FCVAR_UNLOGGED|FCVAR_SPONLY);
->>>>>>> Stashed changes
 
 	RegisterHam(Ham_TakeDamage, "func_breakable", "OnBreakableTakeDamage", true);
 	RegisterHam(Ham_Use, "func_button", "OnButtonPress", true);

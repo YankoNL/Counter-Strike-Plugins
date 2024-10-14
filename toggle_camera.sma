@@ -16,6 +16,7 @@ new const g_szCommands[] =
 public plugin_init()
 {
 	register_plugin("Toggle Camera", "1.1", "YankoNL");
+	register_cvar("ynl_camera", "1.1", FCVAR_SERVER|FCVAR_UNLOGGED|FCVAR_SPONLY);
 
 	register_forward(FM_AddToFullPack, "Fwd_AddToFullPack", true);
 
