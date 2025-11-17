@@ -1,10 +1,32 @@
+/*
+	Simple Toggle Camera - v 1.2
+
+	1.0 - First release
+
+	1.1 - Small update
+		- Added #pragma semicolon to ensures code syntax and correct compiling
+		- Added command const to fit more commands easily (and it looks better)
+
+	1.2 - Minor QOL Update
+		- Replaced bool with BIT for maximum performance
+*/
+#define PLUGIN_VERSION "1.2"
+
 #include <amxmodx>
 #include <fakemeta>
 #include <engine>
 
 #pragma semicolon 1
 
-new bool:g_bInThird[33];
+#if !defined BIT
+	#define BIT(%0)			(1<<(%0))
+#endif
+
+#define BIT_ADD(%0,%1)		(%0 |= BIT(%1))
+#define BIT_SUB(%0,%1)		(%0 &= ~BIT(%1))
+#define BIT_VALID(%0,%1)	bool:((%0 & BIT(%1)) ? true : false)
+
+new g_bInThird;
 
 new const g_szCommands[] =
 {
@@ -15,7 +37,8 @@ new const g_szCommands[] =
 
 public plugin_init()
 {
-	register_plugin("Toggle Camera", "1.1", "YankoNL");
+	register_plugin("Toggle Camera", PLUGIN_VERSION, "YankoNL");
+	register_cvar("ynl_camera", PLUGIN_VERSION, FCVAR_SERVER|FCVAR_UNLOGGED|FCVAR_SPONLY);
 
 	register_forward(FM_AddToFullPack, "Fwd_AddToFullPack", true);
 
@@ -27,7 +50,8 @@ public plugin_precache()
 	precache_model("models/rpgrocket.mdl");
 
 public client_putinserver(id)
-	g_bInThird[id] = false;
+	if(BIT_VALID(g_bInThird, id))
+		BIT_SUB(g_bInThird, id);
 
 public Fwd_AddToFullPack(es_handle, e, ent, host, hostflags, player, pSe)
 	if(player && (ent == host))
@@ -35,8 +59,13 @@ public Fwd_AddToFullPack(es_handle, e, ent, host, hostflags, player, pSe)
 
 public Cmd_Camera(id)
 {
-	g_bInThird[id] = !g_bInThird[id];
-	set_view(id, g_bInThird[id] ? CAMERA_3RDPERSON : CAMERA_NONE);
+	switch(BIT_VALID(g_bInThird, id))
+	{
+		case true: BIT_SUB(g_bInThird, id);
+		case false: BIT_ADD(g_bInThird, id);
+	}
+
+	set_view(id, BIT_VALID(g_bInThird, id) ? CAMERA_3RDPERSON : CAMERA_NONE);
 	client_cmd(id,"spk UI/buttonclickrelease.wav");
 
 	return PLUGIN_HANDLED;

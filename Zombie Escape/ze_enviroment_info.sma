@@ -1,5 +1,5 @@
 /*
-	[ZE] Enviroment Informer - 1.2
+	[ZE] Enviroment Informer - 1.3
 
 	* Description:
 		Shows to everyone in the server who is pressing which buttons on the map.
@@ -22,12 +22,13 @@
 		1.3 - Optimization
 			- Anti-Spam v2 - Now a Player can press multiple different buttons and show only these that weren't pressed in the last X seconds
 			- Block use for X seconds after the button was used once (Players can't trigger the button if 'informer_block_button' is set to 1)
+			- Replaced 'fakemeta' with 'engine' for better runtime
+
 */
 #define PLUGIN_VERSION "1.3"
 
 #include <amxmodx>
 #include <engine>
-#include <fakemeta>
 #include <hamsandwich>
 
 #pragma semicolon 1
@@ -65,13 +66,14 @@ public OnButtonPress(iButton, iActivator, iCaller, iUseType, Float:fValue)
 	if(bPressed[iActivator][iButton]) return get_pcvar_num(g_block_button) == 1 ? HAM_SUPERCEDE : HAM_IGNORED;
 
 	new iMapButtonName[32];
-	pev(iButton, pev_target, iMapButtonName, charsmax(iMapButtonName));
+	entity_get_string(iButton, EV_SZ_target, iMapButtonName, charsmax(iMapButtonName));
 
 	client_print_color(0, print_team_default, "^4%s ^1Player ^3%n ^1pressed ^4%s ", BUTTON_PREFIX, iActivator, iMapButtonName);
 
 	bPressed[iActivator][iButton] = true;
 
 	new iParam[2]; iParam[0] = iActivator; iParam[1] = iButton;
+
 	set_task(get_pcvar_float(g_atispam_delay), "anti_spam", iActivator+iButton, iParam, sizeof(iParam));
 
 	return HAM_IGNORED;
@@ -85,7 +87,7 @@ public OnBreakableTakeDamage(const iEnt, iInflictor, iAttacker, Float:flDamage, 
 		return HAM_IGNORED;
 
 	new iBreakable[32];
-	pev(iEnt, pev_target, iBreakable, charsmax(iBreakable));
+	entity_get_string(iEnt, EV_SZ_target, iBreakable, charsmax(iBreakable));
 
 	if(entity_get_float(iEnt, EV_FL_health) <= 0.0)
 	{
