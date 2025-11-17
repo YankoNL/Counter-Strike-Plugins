@@ -1,9 +1,9 @@
-/* _____                      _       _                          __    ______ 
-  / ____|                    | |     | |                        /_ |  |____  |
- | |      ___   _   _  _ __  | |_  __| |  ___ __      __ _ __    | |      / / 
- | |     / _ \ | | | || '_ \ | __|/ _` | / _ \\ \ /\ / /| '_ \   | |     / /  
- | |____| (_) || |_| || | | || |_| (_| || (_) |\ V  V / | | | |  | | _  / /   
-  \_____|\___/  \__,_||_| |_| \__|\__,_| \___/  \_/\_/  |_| |_|  |_|(_)/_/ 
+/* _____                      _       _                          __    ______   __ 
+  / ____|                    | |     | |                        /_ |  |____  | /_ |
+ | |      ___   _   _  _ __  | |_  __| |  ___ __      __ _ __    | |      / /   | |
+ | |     / _ \ | | | || '_ \ | __|/ _` | / _ \\ \ /\ / /| '_ \   | |     / /    | |
+ | |____| (_) || |_| || | | || |_| (_| || (_) |\ V  V / | | | |  | | _  / /  _  | |
+  \_____|\___/  \__,_||_| |_| \__|\__,_| \___/  \_/\_/  |_| |_|  |_|(_)/_/  (_) |_|
 
 	* Description:
 		Announces when the round is starting with music and countdown.
@@ -55,13 +55,18 @@
 			- Fixed a bug where the sound overlaps, stops and sometimes heard multipe times
 			- Added full support + detection for .wav or .mp3 sounds in all categories
 
+		1.7.1 - Small edit (suggestion by a fan)
+			- Added warmup music
+			- Added 20 sec exact voice line
+			- Added Low gravity during warmup
+
 		* Current Mod Support:
 			- Biohazard (bh_starttime)
 			- Zombie Plague 4.3 or with the same cvar (zp_delay)
 			- ZP 5.0 (zp_gamemode_delay)
 			
 */
-#define PLUGIN_VERSION "1.7"
+#define PLUGIN_VERSION "1.7.1"
 
 #include <amxmodx>
 
@@ -78,12 +83,14 @@
 
 new const g_szPrefix[] = "[ Countdown ]";
 
+new const g_szMusicRe[] = "downwego/full_countdown.wav"
 new const g_szRoundStart[] = "downwego/fatall-start.wav";
 new const g_szZombieInfected[] = "downwego/fatall-come.wav";
+new const g_szSound20Seconds[] = "downwego/20_sec_male.wav";
 
 new g_szCountSound[][] =
 {
-    "downwego/fatall-1.wav",
+	"downwego/fatall-1.wav",
 	"downwego/fatall-2.wav",
 	"downwego/fatall-3.wav",
 	"downwego/fatall-4.wav",
@@ -148,8 +155,10 @@ public plugin_init()
 
 public plugin_precache()
 {
+	precache_sound_type(g_szMusicRe);
 	precache_sound_type(g_szRoundStart);
 	precache_sound_type(g_szZombieInfected);
+	precache_sound_type(g_szSound20Seconds);
 
 	for(new i = 0; i < sizeof g_szCountSound; i++)
 		precache_sound_type(g_szCountSound[i]);
@@ -172,6 +181,9 @@ public warmup()
 	server_cmd("zp_gamemode_delay 999");
 #endif
 
+	server_cmd("sv_gravity 100");	// A research sowed that people like this
+
+	play_sound_type(0, g_szMusicRe)
 	set_task(1.0, "first_round_restart");
 }
 
@@ -209,6 +221,8 @@ public first_round_restart()
 	#elseif defined ZP50
 		server_cmd("zp_gamemode_delay %i", g_iOldDelay);
 	#endif
+
+		server_cmd("sv_gravity 800");		// Reset gravity to the default engine one
 		server_cmd("sv_restartround 1");
 	}
 }
@@ -235,6 +249,8 @@ public Event_HLTV()
 public Toggle_CountDown()
 {
 	if(is_mode_started()) return;
+
+	if(g_szCounter == 20) play_sound_type(0, g_szSound20Seconds)
 
 	switch(get_gvar_type(get_pcvar_num(g_eCvarShowType)))
 	{

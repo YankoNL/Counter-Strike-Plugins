@@ -2,6 +2,7 @@
 
 new bool:g_bIsLastRound, g_HudSync;
 new g_iOldTimelimit = 0;
+new g_iOldTimeEndRound = 0;
 
 #define CHECK_FOR_MAPEND 140522		// The task ID is the creation date - 14.05.2022
 #define DELAY_MAP_CHANGE 141522
@@ -10,6 +11,7 @@ new g_iOldTimelimit = 0;
 public plugin_init()
 {
 	register_plugin("Last Round", "1.1" ,"YankoNL");
+	register_cvar("ynl_last_round", "1.1", FCVAR_SERVER|FCVAR_UNLOGGED|FCVAR_SPONLY);
 	
 	register_event("SendAudio", "Event_EndRound","a", "2=%!MRAD_terwin", "2=%!MRAD_ctwin", "2=%!MRAD_rounddraw");
 	set_task(15.0, "Task_MapEnd", CHECK_FOR_MAPEND, _, _, "d", 1);
@@ -22,8 +24,12 @@ public Task_MapEnd()
 	if(get_playersnum())
 	{
 		g_bIsLastRound = true;
+
 		g_iOldTimelimit = get_cvar_num("mp_timelimit")
+		g_iOldTimeEndRound = get_cvar_num("mp_round_restart_delay")
+
 		server_cmd("mp_timelimit 0")
+		server_cmd("mp_round_restart_delay 15")
 		client_print_color(0, print_team_default, "^4[^3Announcer^4] ^1Time Limit reached! The map will change after this round!")
 
 		set_task(1.0, "displayLastRound", LAST_ROUND_HUD)
@@ -42,7 +48,7 @@ public Event_EndRound()
 	if(g_bIsLastRound)
 	{
 		client_print_color(0, print_team_default, "^4[^3Announcer^4] ^1Round over! Changing map in^3 5 ^1seconds.")
-		set_task(5.0, "Task_DelayMapEnd", DELAY_MAP_CHANGE, _, _, "a", 1) // Delay the map end, so you can see the last guys death
+		set_task(15.0, "Task_DelayMapEnd", DELAY_MAP_CHANGE, _, _, "a", 1) // Delay the map end, so you can see the last guys death
 		remove_task(LAST_ROUND_HUD)
 	}
 }
@@ -58,4 +64,7 @@ public Task_DelayMapEnd()
 
 	if(get_cvar_num("mp_timelimit") == 0)
 		server_cmd("mp_timelimit %d", g_iOldTimelimit)
+
+	if(get_cvar_num("mp_round_restart_delay") >= 15)
+		server_cmd("mp_round_restart_delay %d", g_iOldTimeEndRound)
 }
